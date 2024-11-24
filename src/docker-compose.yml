@@ -1,0 +1,98 @@
+services:
+  nginx:
+    build: requirements/nginx
+    container_name: nginx
+    depends_on:
+      - wordpress
+      - mariadb
+    ports:
+      - "443:443"
+    volumes:
+      - wordpress_web:/var/www/html
+    environment:
+      NGINX_DOMAIN: ${DOMAIN}
+    networks:
+      inception:
+    restart: always
+
+  wordpress:
+    build: requirements/wordpress
+    container_name: wp-php
+    depends_on:
+      - mariadb
+    volumes:
+      - wordpress_web:/var/www/html
+    environment:
+      WORDPRESS_DB_HOST: ${DB_HOST}
+      WORDPRESS_DB_USER: ${DB_USER}
+      WORDPRESS_DB_PASSWORD: ${DB_PASS}
+      WORDPRESS_DB_NAME: ${DB_NAME}
+      WORDPRESS_WP_URL: ${WP_URL}
+      WORDPRESS_WP_TITLE: ${WP_TITLE}
+      WORDPRESS_WP_ADMIN_USER: ${WP_ADMIN_USER}
+      WORDPRESS_WP_ADMIN_PASS: ${WP_ADMIN_PASS}
+      WORDPRESS_WP_ADMIN_EMAIL: ${WP_ADMIN_EMAIL}
+      NEW_USER_NAME: ${USER_NAME}
+      NEW_USER_PASS: ${USER_PASS}
+      NEW_USER_EMAIL: ${USER_EMAIL}
+    networks:
+      inception:
+    restart: always
+
+
+  mariadb:
+    build: requirements/mariadb
+    container_name: mariadb
+    volumes:
+      - maria_db:/var/lib/mysql
+    environment:
+      SQL_DATABASE: ${DB_NAME}
+      SQL_USER: ${DB_USER}
+      SQL_PASS: ${DB_PASS}
+    networks:
+      inception:
+    restart: always
+
+  adminer:
+    build: ./requirements/bonus/Adminer
+    restart: always
+    container_name: adminer
+    depends_on:
+      - mariadb
+    expose:
+     - "9000"
+    networks:
+      inception:
+
+  static:
+    build: requirements/bonus/staticWebsite
+    container_name: static
+    volumes:
+      - wordpress_web:/html
+    networks:
+      inception:
+    restart: always
+    depends_on:
+      - nginx
+      - wordpress
+      - mariadb
+    command: sh -c "cp -r /html_temp/* /html/ && /usr/local/bin/keep-alive.sh"
+
+
+networks:
+  inception:
+
+
+volumes:
+  maria_db:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/amalkhal/data/database
+      o: bind
+  wordpress_web:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/amalkhal/data/wordpress
+      o: bind
